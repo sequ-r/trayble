@@ -95,6 +95,16 @@ dbus-run-session -- scripts/smoke.sh
 That starts the daemon and a test item, then asks the same questions the panel
 and the settings app ask.
 
+## Checking that it runs
+
+The daemon is D-Bus activated: it starts the first time the extension asks for
+it. Its systemd unit is named after the bus name, and it is a **user** unit:
+
+```sh
+systemctl --user status dev.taskbar.Daemon   # not `taskbar`, and note --user
+journalctl --user -b | grep taskbar          # what the panel extension reports
+```
+
 ## Configuration
 
 `~/.config/taskbar/config.toml`, written by the daemon whenever the settings

@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=dev.taskbar.Daemon
 Exec=@BINDIR@/taskbar-daemon
+SystemdService=dev.taskbar.Daemon.service

@@ -98,5 +98,9 @@ echo "  3. gnome-extensions enable taskbar@taskbar.dev"
 echo "  4. optionally start the tray at login:"
 echo "       systemctl --user enable --now dev.taskbar.Daemon.service"
 echo
+echo "the daemon is D-Bus activated and its unit is named after the bus name:"
+echo "  systemctl --user status dev.taskbar.Daemon   # note --user"
+echo "  journalctl --user -b | grep taskbar          # what the panel reports"
+echo
 echo "try it without any real tray application:"
 echo "  taskbar-testitem --animate 3 --flip-status 11"
