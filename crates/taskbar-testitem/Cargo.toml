@@ -1,0 +1,23 @@
+[package]
+name = "taskbar-testitem"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A fake StatusNotifierItem for testing the taskbar tray"
+rust-version.workspace = true
+
+[[bin]]
+name = "taskbar-testitem"
+path = "src/main.rs"
+
+[dependencies]
+taskbar-core.workspace = true
+taskbar-api.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+zbus.workspace = true
+zvariant.workspace = true
+serde = { workspace = true, features = ["derive"] }

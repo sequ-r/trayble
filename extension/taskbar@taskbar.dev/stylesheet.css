@@ -1,0 +1,11 @@
+/* Style for the tray indicator. Most of the look comes from the shell theme;
+   this only sets up the icon strip. */
+
+.taskbar-icon {
+    padding: 0 2px;
+    icon-size: 16px;
+}
+
+.taskbar-placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}

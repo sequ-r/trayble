@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Taskbar Settings
+GenericName=System Tray Settings
+Comment=Choose which tray icons are shown in the GNOME panel
+Exec=taskbar-settings
+Icon=preferences-desktop
+Terminal=false
+Type=Application
+Categories=Settings;DesktopSettings;GTK;
+Keywords=tray;icon;status;notification;area;
+StartupNotify=true
