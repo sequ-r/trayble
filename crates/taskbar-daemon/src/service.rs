@@ -15,7 +15,6 @@ use taskbar_core::view::{ConfigView, ItemView, MenuView, StatusView};
 use taskbar_core::Config;
 use zbus::fdo;
 use zbus::object_server::SignalEmitter;
-use zvariant::Value;
 
 use crate::item::Registry;
 use crate::store::{Store, WatcherStatus};
@@ -129,14 +128,13 @@ impl Service {
         key: &str,
         node_id: i32,
         event_id: &str,
-        data: Value<'_>,
         timestamp: u32,
     ) -> fdo::Result<()> {
         if self.store.service(key).is_none() {
             return Err(no_such_item(key));
         }
         self.registry
-            .menu_event(key, node_id, event_id, &data, timestamp)
+            .menu_event(key, node_id, event_id, timestamp)
             .await;
         Ok(())
     }

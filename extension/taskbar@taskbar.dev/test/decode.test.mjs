@@ -10,6 +10,8 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 
 import {
+    child,
+    count,
     unpackConfig,
     unpackItem,
     unpackItems,
@@ -32,6 +34,10 @@ class FakeVariant {
 
     n_children() {
         return this._value.length;
+    }
+
+    get_type_string() {
+        return this._type;
     }
 
     unpack() {
@@ -197,6 +203,19 @@ describe('reply decoding', () => {
 
     it('fails loudly instead of silently on the wrong shape', () => {
         assert.throws(() => unpackItem(itemFixture().get_child_value(0)),
-            /needs a container/);
+            /not a container/);
+    });
+
+    // GLib *aborts* on get_child_value of a scalar; the decoder must throw a
+    // catchable Error instead, or one wrong index takes the session down.
+    it('throws instead of aborting on a scalar', () => {
+        const scalar = new FakeVariant('s', 'hello');
+        assert.throws(() => count(scalar), /not a container: s/);
+        assert.throws(() => child(scalar, 0), /not a container: s/);
+    });
+
+    it('throws instead of aborting on a missing field', () => {
+        assert.throws(() => child(iconFixture(), 9), /no field 9 in .* children\)/);
+        assert.throws(() => child(iconFixture(), -1), /no field -1/);
     });
 });

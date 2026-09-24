@@ -9,6 +9,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import {
+    child,
     unpackConfig,
     unpackItems,
     unpackMenu,
@@ -75,7 +76,7 @@ export class DaemonClient {
     /** One reply body: `((...))`, so field 0 is the single return value. */
     async _reply(method, parameters, unpack) {
         const reply = await this.call(method, parameters);
-        return unpack(reply.get_child_value(0));
+        return unpack(child(reply, 0));
     }
 
     /** The visible items, with icons resolved at `iconPixelSize` pixels. */
@@ -120,9 +121,8 @@ export class DaemonClient {
     }
 
     menuEvent(key, nodeId, eventId, timestamp = 0) {
-        return this._notify('MenuEvent', new GLib.Variant('(sisvu)', [
-            key, nodeId, eventId,
-            new GLib.Variant('u', [0]), timestamp,
+        return this._notify('MenuEvent', new GLib.Variant('(sisu)', [
+            key, nodeId, eventId, timestamp,
         ]));
     }
 
@@ -153,8 +153,13 @@ export class DaemonClient {
             this._subscriptions.push(this._connection.signal_subscribe(
                 DAEMON_BUS_NAME, DAEMON_INTERFACE, signal, DAEMON_OBJECT_PATH,
                 null, Gio.DBusSignalFlags.NONE,
-                (_connection, _sender, _path, _iface, _name, parameters) =>
-                    this._onChanged(event, parameters.deep_unpack())));
+                (_connection, _sender, _path, _iface, _name, parameters) => {
+                    try {
+                        this._onChanged(event, parameters.deep_unpack());
+                    } catch (error) {
+                        console.error(`taskbar: bad ${signal} signal: ${error.message}`);
+                    }
+                }));
         }
     }
 

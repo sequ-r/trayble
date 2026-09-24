@@ -18,8 +18,28 @@
 // in the order the Rust structs declare them (pinned by the
 // `wire_signatures_are_stable` test in taskbar-core).
 
+/**
+ * Number of children of a container variant.
+ *
+ * `GLib.Variant` *asserts* — aborting the whole compositor — when
+ * `get_child_value`/`n_children` meet a scalar. Every access therefore goes
+ * through here first and throws a normal, catchable `Error` instead, which
+ * the caller logs with the exact type and index.
+ */
+export function count(value) {
+    const type = value.get_type_string();
+    if (!'a({'.includes(type[0]))
+        throw new Error(`not a container: ${type}`);
+    return value.n_children();
+}
+
 /** The i-th field of a struct or the i-th element of an array. */
-export const child = (value, index) => value.get_child_value(index);
+export function child(value, index) {
+    const children = count(value);
+    if (index < 0 || index >= children)
+        throw new Error(`no field ${index} in ${value.get_type_string()} (${children} children)`);
+    return value.get_child_value(index);
+}
 
 /** The i-th field, unpacked. Only meaningful for scalar fields. */
 export const at = (value, index) => child(value, index).unpack();
@@ -27,21 +47,21 @@ export const at = (value, index) => child(value, index).unpack();
 /** All elements of an `as` array. */
 export function strings(value) {
     return Array.from(
-        {length: value.n_children()},
+        {length: count(value)},
         (_ignored, index) => child(value, index).unpack());
 }
 
 /** All elements of an `aas` array, e.g. the key chords of a menu entry. */
 export function stringLists(value) {
     return Array.from(
-        {length: value.n_children()},
+        {length: count(value)},
         (_ignored, index) => strings(child(value, index)));
 }
 
 /** All elements of an `a(...)` array, decoded one by one. */
 export function array(value, decode) {
     return Array.from(
-        {length: value.n_children()},
+        {length: count(value)},
         (_ignored, index) => decode(child(value, index)));
 }
 
@@ -57,7 +77,7 @@ export function unpackIcon(value) {
         // A PNG image. `Gio.BytesIcon` hands it to gdk-pixbuf, so the panel
         // never deals in pixel formats and a broken image just shows the
         // fallback icon.
-        data: data.n_children() > 0 ? data.get_data_as_bytes() : null,
+        data: count(data) > 0 ? data.get_data_as_bytes() : null,
     };
 }
 

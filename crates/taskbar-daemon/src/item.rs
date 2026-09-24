@@ -21,7 +21,7 @@ use taskbar_core::sni::{ItemProps, ITEM_INTERFACE};
 use taskbar_core::ServiceRef;
 use zbus::fdo::PropertiesProxy;
 use zbus::names::{BusName, InterfaceName};
-use zvariant::{ObjectPath, Value};
+use zvariant::ObjectPath;
 use zbus::Connection;
 
 use crate::store::Store;
@@ -148,15 +148,9 @@ impl Registry {
     }
 
     /// Open, close or click part of the menu from the application's point of
-    /// view.
-    pub async fn menu_event(
-        &self,
-        key: &str,
-        node_id: i32,
-        event_id: &str,
-        data: &Value<'_>,
-        timestamp: u32,
-    ) {
+    /// view. The dbusmenu `data` argument is filled in here: it is a variant,
+    /// which is wire machinery rather than something a client should build.
+    pub async fn menu_event(&self, key: &str, node_id: i32, event_id: &str, timestamp: u32) {
         let (Some(service), Some(menu_path)) = (self.store.service(key), self.store.menu_path(key))
         else {
             return;
@@ -164,7 +158,8 @@ impl Registry {
         let Some(proxy) = menu_proxy(&self.conn, &service, &menu_path).await else {
             return;
         };
-        if let Err(error) = proxy.event(node_id, event_id, data, timestamp).await {
+        let data = taskbar_api::value::empty_event_data();
+        if let Err(error) = proxy.event(node_id, event_id, &data, timestamp).await {
             tracing::debug!(%key, %error, "menu event failed");
         }
     }

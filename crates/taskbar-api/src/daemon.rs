@@ -3,7 +3,6 @@
 
 use taskbar_core::view::{ConfigView, ItemView, MenuView, StatusView};
 use zbus::proxy;
-use zvariant::Value;
 
 /// Bus name of the daemon. D-Bus activation starts it on first use.
 pub const DAEMON_BUS_NAME: &str = "dev.taskbar.Daemon";
@@ -41,12 +40,15 @@ pub trait DaemonApi {
     fn get_menu(&self, key: &str) -> zbus::Result<MenuView>;
 
     /// Forward a menu interaction (`"clicked"`, `"opened"`, `"closed"`, ...).
+    ///
+    /// The dbusmenu `data` argument is deliberately not on this wire: both
+    /// reference implementations send an empty value and packing variants in
+    /// the JavaScript client is fragile. The daemon fills it in.
     fn menu_event(
         &self,
         key: &str,
         node_id: i32,
         event_id: &str,
-        data: &Value<'_>,
         timestamp: u32,
     ) -> zbus::Result<()>;
 
