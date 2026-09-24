@@ -87,8 +87,14 @@ class TaskbarIndicator extends PanelMenu.Button {
         this.accessible_name = item.accessibleName || item.title;
     }
 
-    /** Rebuild the popup menu from a `GetMenu` reply. */
-    setMenu(view) {
+    /**
+     * Rebuild the popup menu from a `GetMenu` reply.
+     *
+     * Named `updateMenu`, not `setMenu`: `PanelMenu.Button` already owns
+     * `setMenu(menu)`, which its `_init` calls to create `this.menu`.
+     * Overriding that name means the menu is never created at all.
+     */
+    updateMenu(view) {
         this._menuRevision = view.revision;
         this.menu.removeAll();
         const items = buildMenuNodes(view.nodes, (nodeId, eventId) => {

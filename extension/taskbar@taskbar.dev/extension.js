@@ -146,7 +146,7 @@ export default class TaskbarExtension extends Extension {
         try {
             const view = await this._client.getMenu(key);
             if (this._indicators.get(key) === indicator)
-                indicator.setMenu(view);
+                indicator.updateMenu(view);
         } catch {
             // An item without a menu is perfectly normal.
         }
