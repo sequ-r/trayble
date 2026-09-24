@@ -1084,7 +1084,7 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "taskbar-api"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "serde",
  "taskbar-core",
@@ -1094,7 +1094,7 @@ dependencies = [
 
 [[package]]
 name = "taskbar-app"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -1111,7 +1111,7 @@ dependencies = [
 
 [[package]]
 name = "taskbar-core"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "png",
  "serde",
@@ -1121,7 +1121,7 @@ dependencies = [
 
 [[package]]
 name = "taskbar-daemon"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "futures-util",
@@ -1138,7 +1138,7 @@ dependencies = [
 
 [[package]]
 name = "taskbar-testitem"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "serde",

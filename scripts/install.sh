@@ -75,6 +75,16 @@ install -m 644 "$here/data/applications/dev.taskbar.Settings.desktop" \
 
 command -v systemctl >/dev/null && systemctl --user daemon-reload || true
 
+# D-Bus activation never replaces a running daemon, and a stale one speaks an
+# older wire shape to the freshly installed extension. Restart it.
+if command -v systemctl >/dev/null && systemctl --user --quiet is-active dev.taskbar.Daemon.service 2>/dev/null; then
+    systemctl --user restart dev.taskbar.Daemon.service
+    echo "restarted the running tray daemon"
+elif pgrep -x taskbar-daemon >/dev/null 2>&1; then
+    pkill -x taskbar-daemon
+    echo "stopped the running tray daemon (it restarts on demand)"
+fi
+
 echo
 echo "installed:"
 echo "  daemon, settings app and test item in $bindir"

@@ -68,7 +68,11 @@ export function array(value, decode) {
 // -- IconView (ssiiay) ------------------------------------------------------
 
 export function unpackIcon(value) {
-    const data = child(value, 4);
+    // `data` is the last field of IconView. Reading it that way keeps the
+    // extension working against a daemon of a neighbouring version: the
+    // shape lost a `row_stride` field in 0.1.3, and a D-Bus activated daemon
+    // keeps running the binary it started with after an upgrade.
+    const data = child(value, count(value) - 1);
     return {
         name: at(value, 0),
         themePath: at(value, 1),

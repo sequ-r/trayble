@@ -12,6 +12,7 @@ import {describe, it} from 'node:test';
 import {
     child,
     count,
+    unpackIcon,
     unpackConfig,
     unpackItem,
     unpackItems,
@@ -212,6 +213,24 @@ describe('reply decoding', () => {
         const scalar = new FakeVariant('s', 'hello');
         assert.throws(() => count(scalar), /not a container: s/);
         assert.throws(() => child(scalar, 0), /not a container: s/);
+    });
+
+    // A daemon of a neighbouring version sends IconView with a row_stride
+    // field (removed in 0.1.3). Activation keeps old daemons running, so the
+    // decoder must accept both shapes.
+    it('tolerates the older icon shape with rowStride', () => {
+        const legacy = v('(ssiiiay)', [
+            v('s', 'demo-icon'),
+            v('s', ''),
+            v('i', 2),
+            v('i', 2),
+            v('i', 8),
+            v('ay', PNG_BYTES),
+        ]);
+        const icon = unpackIcon(legacy);
+        assert.equal(icon.name, 'demo-icon');
+        assert.deepEqual(Array.from(icon.data.toArray()), PNG_BYTES,
+            'data is found whether or not rowStride is present');
     });
 
     it('throws instead of aborting on a missing field', () => {
