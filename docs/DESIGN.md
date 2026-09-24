@@ -60,18 +60,25 @@ Why: clients never assemble state from deltas, so they cannot end up with a
 stale or half-applied view, and the JavaScript side stays trivial. The cost is
 one round trip per change, which is nothing at tray-icon rates.
 
-### Icons travel as raw pixels
+### Icons travel as images, not pixels
 
-An item's icon is sent as the ARGB32 pixels in network byte order that the
-application itself sent — unchanged, uncompressed:
+An item's icon leaves the daemon as a PNG (`icon::to_png`, a pure function
+with a round-trip test). The panel shows it through `Gio.BytesIcon` — the same
+`GLoadableIcon` path `Gio.FileIcon` takes — and the settings app decodes it
+with `gdk::Texture::from_bytes`.
 
-- `St.ImageContent.set_bytes(..., Cogl.PixelFormat.ARGB_8888, ...)` takes that
-  exact layout (the reference AppIndicator extension does the same),
-- `gdk::MemoryTexture::new(..., MemoryFormat::A8r8g8b8, ...)` takes that exact
-  layout too.
+An earlier version forwarded the application's raw ARGB32 buffers straight
+into `St.ImageContent.set_bytes(...)`: it saved an encode and kept the pixels
+byte-for-byte as the application sent them. But it puts a pixel format, a row
+stride and (on GNOME 48+) a Cogl context across the border into the
+compositor, where a mistake in any of them does not break one icon — it takes
+the whole session down. That is the wrong trade for a tray icon.
 
-So both consumers hand the bytes to their toolkit as a zero-copy view: no PNG
-encode/decode, no colour conversion, no temp files, one wire format.
+A PNG is self-describing: gdk-pixbuf decodes it in managed code, a malformed
+image degrades to the fallback icon, and neither toolkit ever agrees with the
+other about pixel formats. The encode is trivially cheap at these sizes (a
+44×44 icon is a couple of hundred bytes) and it happens in Rust, where it is
+unit tested.
 
 Decisions made *before* the pixels travel, in Rust, with tests:
 

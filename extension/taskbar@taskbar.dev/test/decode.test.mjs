@@ -50,19 +50,20 @@ const v = (type, value) => new FakeVariant(type, value);
 
 // -- fixtures, shaped exactly like the Rust structs in taskbar-core -------
 
+const PNG_BYTES = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3];
+
 function iconFixture() {
-    return v('(ssiiiay)', [
+    return v('(ssiiay)', [
         v('s', 'demo-icon'),
         v('s', '/opt/demo/icons'),
         v('i', 2),
         v('i', 2),
-        v('i', 8),
-        v('ay', [255, 1, 2, 3, 255, 4, 5, 6, 255, 7, 8, 9, 255, 10, 11, 12]),
+        v('ay', PNG_BYTES),
     ]);
 }
 
 function itemFixture() {
-    return v('(ssssssbb(ssiiiay))', [
+    return v('(ssssssbb(ssiiay))', [
         v('s', 'demo'),
         v('s', 'demo'),
         v('s', 'Demo'),
@@ -136,17 +137,16 @@ describe('reply decoding', () => {
         assert.equal(item.itemIsMenu, false);
         assert.equal(item.icon.name, 'demo-icon');
         assert.equal(item.icon.width, 2);
-        assert.equal(item.icon.rowStride, 8);
-        assert.deepEqual(
-            Array.from(item.icon.data.toArray()),
-            [255, 1, 2, 3, 255, 4, 5, 6, 255, 7, 8, 9, 255, 10, 11, 12]);
+        assert.equal(item.icon.height, 2);
+        assert.deepEqual(Array.from(item.icon.data.toArray()), PNG_BYTES,
+            'the icon arrives as a PNG image');
     });
 
     it('leaves the icon data empty when there are no pixels', () => {
         const bare = iconFixture();
-        bare._value[5] = v('ay', []);
+        bare._value[4] = v('ay', []);
 
-        const item = unpackItem(v('(ssssssbb(ssiiiay))', [
+        const item = unpackItem(v('(ssssssbb(ssiiay))', [
             ...itemFixture()._value.slice(0, 8),
             bare,
         ]));
@@ -154,7 +154,7 @@ describe('reply decoding', () => {
     });
 
     it('decodes a list of items', () => {
-        const items = unpackItems(v('a(ssssssbb(ssiiiay))', [
+        const items = unpackItems(v('a(ssssssbb(ssiiay))', [
             itemFixture(),
             itemFixture(),
         ]));

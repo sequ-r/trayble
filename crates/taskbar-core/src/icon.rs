@@ -87,6 +87,41 @@ impl Pixmap {
     }
 }
 
+/// Encode a pixmap as a PNG image.
+///
+/// This is the only form icons leave the daemon in. Handing raw pixel buffers
+/// to a compositor is a footgun — the caller has to agree on pixel format,
+/// stride and byte order, and a mistake crashes the whole session — while a
+/// PNG is a self-describing image that gdk-pixbuf and GDK both decode in
+/// managed code.
+pub fn to_png(pixmap: &Pixmap) -> Option<Vec<u8>> {
+    let rgba = pixmap.to_rgba()?;
+    let mut png = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut png, pixmap.width as u32, pixmap.height as u32);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().ok()?;
+        writer.write_image_data(&rgba).ok()?;
+    }
+    Some(png)
+}
+
+/// Decode a PNG image back into a pixmap. Used by tests and by tools that
+/// want to look at what the panel shows.
+pub fn from_png(png: &[u8]) -> Option<Pixmap> {
+    let decoder = png::Decoder::new(std::io::Cursor::new(png));
+    let mut reader = decoder.read_info().ok()?;
+    let mut rgba = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut rgba).ok()?;
+    rgba.truncate(info.buffer_size());
+    Some(Pixmap::from_rgba(
+        info.width as i32,
+        info.height as i32,
+        &rgba,
+    ))
+}
+
 /// Pick the pixmap that best fills `target` pixels: the smallest one that is
 /// at least `target` wide, so upscaling is only done when nothing large
 /// enough was provided. Invalid entries are ignored; ties are broken by
@@ -273,6 +308,23 @@ mod tests {
         assert_eq!(merged.pixel(1, 1), Some([255, 255, 255, 255]));
         assert_eq!(merged.pixel(2, 2), Some([255, 255, 255, 255]));
         assert_eq!(merged.pixel(3, 3), Some([255, 0, 0, 0]));
+    }
+
+    #[test]
+    fn png_round_trip_keeps_the_picture() {
+        let p = solid(3, 2, [255, 10, 20, 30]);
+        let png = to_png(&p).expect("encodes");
+        assert!(png.starts_with(&[0x89, b'P', b'N', b'G']), "is a PNG: {png:?}");
+
+        let back = from_png(&png).expect("decodes");
+        assert_eq!((back.width, back.height), (3, 2));
+        assert_eq!(back.pixel(2, 1), Some([255, 10, 20, 30]));
+    }
+
+    #[test]
+    fn broken_images_encode_to_nothing() {
+        assert!(to_png(&Pixmap::new(2, 2, vec![0; 3])).is_none());
+        assert!(from_png(&[1, 2, 3]).is_none());
     }
 
     #[test]

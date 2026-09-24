@@ -45,23 +45,23 @@ export function array(value, decode) {
         (_ignored, index) => decode(child(value, index)));
 }
 
-// -- IconView (ssiiiay) -----------------------------------------------------
+// -- IconView (ssiiay) ------------------------------------------------------
 
 export function unpackIcon(value) {
-    const data = child(value, 5);
+    const data = child(value, 4);
     return {
         name: at(value, 0),
         themePath: at(value, 1),
         width: at(value, 2),
         height: at(value, 3),
-        rowStride: at(value, 4),
-        // Kept as bytes: St.ImageContent takes its pixels from
-        // `get_data_as_bytes()`, and gdk::MemoryTexture likes the same.
+        // A PNG image. `Gio.BytesIcon` hands it to gdk-pixbuf, so the panel
+        // never deals in pixel formats and a broken image just shows the
+        // fallback icon.
         data: data.n_children() > 0 ? data.get_data_as_bytes() : null,
     };
 }
 
-// -- ItemView (ssssssbb(ssiiiay)) -------------------------------------------
+// -- ItemView (ssssssbb(ssiiay)) --------------------------------------------
 
 export function unpackItem(value) {
     return {

@@ -16,17 +16,18 @@ use crate::sni::{Icon, ToolTip};
 
 /// One icon, ready to paint.
 ///
-/// `data` holds raw ARGB32 pixels in network byte order (`width * 4` bytes
-/// per row), which is what `St.ImageContent` and `gdk::MemoryTexture` both
-/// accept directly. `name` is only filled in when the application supplied no
-/// pixel data at all and the theme has to be consulted instead.
+/// `data` is a PNG image: a self-describing picture that gdk-pixbuf and GDK
+/// decode in managed code. Handing raw pixel buffers to a compositor would
+/// mean agreeing on pixel format, stride and byte order across two toolkits,
+/// where a single mistake takes the whole session down. `name` is only filled
+/// in when the application supplied no pixel data at all and the icon theme
+/// has to be consulted instead.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, zvariant::Type)]
 pub struct IconView {
     pub name: String,
     pub theme_path: String,
     pub width: i32,
     pub height: i32,
-    pub row_stride: i32,
     pub data: Vec<u8>,
 }
 
@@ -54,8 +55,7 @@ impl IconView {
             theme_path: String::new(),
             width: pixmap.width,
             height: pixmap.height,
-            row_stride: pixmap.row_stride() as i32,
-            data: pixmap.data.clone(),
+            data: crate::icon::to_png(pixmap).unwrap_or_default(),
         }
     }
 
@@ -71,9 +71,9 @@ impl IconView {
         self.name.is_empty() && self.data.is_empty()
     }
 
-    /// The pixels, if this icon carries any.
+    /// The picture behind the icon, if it has one.
     pub fn to_pixmap(&self) -> Option<Pixmap> {
-        (!self.data.is_empty()).then(|| Pixmap::new(self.width, self.height, self.data.clone()))
+        crate::icon::from_png(&self.data)
     }
 }
 
@@ -300,7 +300,6 @@ mod tests {
         let view = ItemView::of(&item(), 22);
         assert_eq!(view.key, "demo");
         assert_eq!(view.icon.width, 32, "the 32px pixmap fills 22px best");
-        assert_eq!(view.icon.row_stride, 32 * 4);
         assert!(view.has_menu);
         assert!(!view.icon.is_empty());
     }
@@ -391,8 +390,8 @@ mod tests {
             T::SIGNATURE.to_string()
         }
 
-        assert_eq!(signature::<ItemView>(), "(ssssssbb(ssiiiay))");
-        assert_eq!(signature::<IconView>(), "(ssiiiay)");
+        assert_eq!(signature::<ItemView>(), "(ssssssbb(ssiiay))");
+        assert_eq!(signature::<IconView>(), "(ssiiay)");
         assert_eq!(signature::<MenuView>(), "(sta(iissbbissaasb))");
         assert_eq!(signature::<ConfigView>(), "(isasasbsi)");
         assert_eq!(signature::<StatusView>(), "(ssbsbitss)");

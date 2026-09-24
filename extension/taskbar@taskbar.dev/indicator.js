@@ -6,7 +6,6 @@
 // menu entries.
 
 import Clutter from 'gi://Clutter';
-import Cogl from 'gi://Cogl';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
@@ -55,40 +54,34 @@ class TaskbarIndicator extends PanelMenu.Button {
         return this._menuRevision;
     }
 
-    /** Show a new picture of the item; safe to call on every update. */
+    /**
+     * Show a new picture of the item; safe to call on every update.
+     *
+     * Icons arrive as PNG images and are shown through `Gio.BytesIcon`, the
+     * same `GLoadableIcon` path `Gio.FileIcon` takes. Everything from there
+     * on is gdk-pixbuf and St's regular icon loading: the compositor never
+     * sees a pixel format, and a malformed image degrades to the fallback
+     * icon instead of anything worse.
+     */
     update(item) {
         this._item = item;
         this._icon.set({
             width: this._iconSize,
             height: this._iconSize,
             icon_size: this._iconSize,
-            content: null,
             gicon: null,
         });
 
-        const {name, themePath, width, height, rowStride, data} = item.icon;
-        if (data) {
-            // Raw pixels as the application sent them: ARGB32 in network byte
-            // order, which is what Cogl calls ARGB_8888. Handing them to
-            // St.ImageContent like this is why no conversion happens anywhere.
-            const content = new St.ImageContent({
-                preferredWidth: width,
-                preferredHeight: height,
-            });
-            // GNOME 48 added the compositor's Cogl context as first argument.
-            const args = [];
-            const backend = global.stage?.context?.get_backend?.();
-            if (content.set_bytes.length === 6 && backend?.get_cogl_context)
-                args.push(backend.get_cogl_context());
-            args.push(data, Cogl.PixelFormat.ARGB_8888, width, height, rowStride);
-            content.set_bytes(...args);
-            this._icon.set({
-                content,
-                contentGravity: Clutter.ContentGravity.RESIZE_ASPECT,
-            });
-        } else if (name) {
-            // No pixels: fall back to the icon theme.
-            this._icon.gicon = resolveThemedIcon(name, themePath, this._iconSize);
+        try {
+            const {name, themePath, data} = item.icon;
+            if (data) {
+                this._icon.gicon = new Gio.BytesIcon({bytes: data});
+            } else if (name) {
+                // No image: fall back to the icon theme.
+                this._icon.gicon = resolveThemedIcon(name, themePath, this._iconSize);
+            }
+        } catch (error) {
+            console.error(`taskbar: cannot paint ${item.key}: ${error.message}`);
         }
 
         this.accessible_name = item.accessibleName || item.title;

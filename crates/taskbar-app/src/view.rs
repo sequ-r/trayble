@@ -428,24 +428,23 @@ fn index_of(options: [&str; 3], value: &str) -> usize {
 
 /// A small image for one icon of the wire format.
 ///
-/// The pixels are ARGB32 in network byte order, which is exactly
-/// `gdk::MemoryFormat::A8r8g8b8`, so the texture is a view of the bytes we
-/// were given: no copying and no conversion. Theme names are the fallback
-/// for applications that name their icon instead of drawing it.
+/// The icon travels as a PNG, which GDK decodes for us: no pixel format or
+/// stride to agree on, and a broken image degrades to the fallback icon
+/// instead of anything worse. Theme names are the fallback for applications
+/// that name their icon instead of drawing it.
 pub fn icon_image(icon: &IconView, pixel_size: i32) -> gtk::Image {
     let image = gtk::Image::new();
     image.set_pixel_size(pixel_size);
 
     if !icon.data.is_empty() {
         let bytes = glib::Bytes::from_owned(icon.data.clone());
-        let texture = gdk::MemoryTexture::new(
-            icon.width,
-            icon.height,
-            gdk::MemoryFormat::A8r8g8b8,
-            &bytes,
-            icon.row_stride as usize,
-        );
-        image.set_paintable(Some(&texture));
+        match gdk::Texture::from_bytes(&bytes) {
+            Ok(texture) => image.set_paintable(Some(&texture)),
+            Err(error) => {
+                tracing::warn!(%error, "icon is not a readable image");
+                image.set_icon_name(Some("image-missing"));
+            }
+        }
     } else if let Some(name) = non_empty(&icon.name) {
         image.set_paintable(Some(&themed_paintable(
             name,
