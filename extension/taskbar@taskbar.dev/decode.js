@@ -44,6 +44,20 @@ export function child(value, index) {
 /** The i-th field, unpacked. Only meaningful for scalar fields. */
 export const at = (value, index) => child(value, index).unpack();
 
+/**
+ * The value a single-out-argument reply carries.
+ *
+ * A reply body is the tuple of out arguments, and how a record sits inside it
+ * depends on how the sender marshalled it: `ConfigView` arrives with its
+ * fields *as* the tuple's children, while a list arrives as one child holding
+ * the array. One child means "unwrap it"; anything else is the value already.
+ * Unwrapping unconditionally turned `ConfigView` into its first field, and
+ * `get_child_value` on a scalar is an assertion inside GLib.
+ */
+export function out(reply) {
+    return count(reply) === 1 ? child(reply, 0) : reply;
+}
+
 /** All elements of an `as` array. */
 export function strings(value) {
     return Array.from(

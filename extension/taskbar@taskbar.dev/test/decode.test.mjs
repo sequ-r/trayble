@@ -12,6 +12,7 @@ import {describe, it} from 'node:test';
 import {
     child,
     count,
+    out,
     unpackIcon,
     unpackConfig,
     unpackItem,
@@ -205,6 +206,23 @@ describe('reply decoding', () => {
     it('fails loudly instead of silently on the wrong shape', () => {
         assert.throws(() => unpackItem(itemFixture().get_child_value(0)),
             /not a container/);
+    });
+
+    // A record reply arrives either as the record itself (its fields are the
+    // out-argument tuple's children) or as a one-element tuple wrapping it,
+    // depending on the sender. Both must decode to the same thing.
+    it('reads a record whether or not it is wrapped', () => {
+        const record = configFixture();
+        const wrapped = v('((isasasbsi))', [record]);
+
+        assert.equal(unpackConfig(out(record)).iconSize, 24);
+        assert.equal(unpackConfig(out(wrapped)).iconSize, 24);
+    });
+
+    it('unwraps a single out-argument such as a list', () => {
+        const list = v('a(ssssssbb(ssiiay))', [itemFixture()]);
+        const reply = v('(a(ssssssbb(ssiiay)))', [list]);
+        assert.equal(unpackItems(out(reply)).length, 1);
     });
 
     // GLib *aborts* on get_child_value of a scalar; the decoder must throw a

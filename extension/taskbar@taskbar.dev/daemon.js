@@ -9,7 +9,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import {
-    child,
+    out,
     unpackConfig,
     unpackItems,
     unpackMenu,
@@ -73,10 +73,9 @@ export class DaemonClient {
             console.debug(`taskbar: ${method} failed: ${error.message}`));
     }
 
-    /** One reply body: `((...))`, so field 0 is the single return value. */
     async _reply(method, parameters, unpack) {
         const reply = await this.call(method, parameters);
-        return unpack(child(reply, 0));
+        return unpack(out(reply));
     }
 
     /** The visible items, with icons resolved at `iconPixelSize` pixels. */
