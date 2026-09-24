@@ -1,11 +1,19 @@
 // Client for the taskbar daemon (dev.taskbar.Daemon).
 //
 // The only place the panel talks to the daemon. Two kinds of pure helpers
-// live here as well: they turn the unpacked D-Bus tuples into plain objects,
-// so the indicator never has to know that `item[8][4]` is an icon stride.
+// support it: `decode.js` turns replies into plain objects, and everything
+// here is promise based. The daemon always answers with a complete picture,
+// so signals merely say "something changed, ask again".
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+
+import {
+    unpackConfig,
+    unpackItems,
+    unpackMenu,
+    unpackStatus,
+} from './decode.js';
 
 Gio._promisify(Gio.DBusConnection.prototype, 'call', 'call_finish');
 
@@ -16,8 +24,9 @@ const DAEMON_INTERFACE = 'dev.taskbar.Daemon';
 /**
  * A connection to the daemon that follows its name on the bus.
  *
- * @param {(event: string) => void} onChanged called when something changed;
- *     `event` is one of `'items'`, `'menu'`, `'config'`, `'status'`.
+ * @param {(event: string, detail?: Array) => void} onChanged called when
+ *     something changed; `event` is one of `'items'`, `'menu'`, `'config'`,
+ *     `'status'`.
  */
 export class DaemonClient {
     constructor(onChanged) {
@@ -63,29 +72,29 @@ export class DaemonClient {
             console.debug(`taskbar: ${method} failed: ${error.message}`));
     }
 
+    /** One reply body: `((...))`, so field 0 is the single return value. */
+    async _reply(method, parameters, unpack) {
+        const reply = await this.call(method, parameters);
+        return unpack(reply.get_child_value(0));
+    }
+
     /** The visible items, with icons resolved at `iconPixelSize` pixels. */
-    async listItems(iconPixelSize) {
-        const reply = await this.call('ListItems', new GLib.Variant('(i)', [iconPixelSize]));
-        const items = reply.get_child_value(0);
-        return Array.from(
-            {length: items.n_children()},
-            (_ignored, index) => unpackItem(items.get_child_value(index)));
+    listItems(iconPixelSize) {
+        return this._reply('ListItems',
+            new GLib.Variant('(i)', [iconPixelSize]), unpackItems);
     }
 
     /** The menu of one item, as a flat list of nodes. */
-    async getMenu(key) {
-        const reply = await this.call('GetMenu', new GLib.Variant('(s)', [key]));
-        return unpackMenu(reply.deep_unpack()[0]);
+    getMenu(key) {
+        return this._reply('GetMenu', new GLib.Variant('(s)', [key]), unpackMenu);
     }
 
-    async getConfig() {
-        const reply = await this.call('GetConfig', null);
-        return unpackConfig(reply.deep_unpack()[0]);
+    getConfig() {
+        return this._reply('GetConfig', null, unpackConfig);
     }
 
-    async getStatus() {
-        const reply = await this.call('GetStatus', null);
-        return unpackStatus(reply.deep_unpack()[0]);
+    getStatus() {
+        return this._reply('GetStatus', null, unpackStatus);
     }
 
     // -- interactions ---------------------------------------------------
@@ -154,87 +163,4 @@ export class DaemonClient {
             this._connection?.signal_unsubscribe(id);
         this._subscriptions = [];
     }
-}
-
-// -- decoding --------------------------------------------------------------
-//
-// Items are decoded child by child instead of with `deep_unpack()`: the icon
-// data must stay a `GLib.Variant`, because `St.ImageContent` takes its pixels
-// from `variant.get_data_as_bytes()`. Everything else is plain data.
-
-const child = (value, index) => value.get_child_value(index);
-const at = (value, index) => child(value, index).unpack();
-
-function unpackIcon(value) {
-    const data = child(value, 5);
-    return {
-        name: at(value, 0),
-        themePath: at(value, 1),
-        width: at(value, 2),
-        height: at(value, 3),
-        rowStride: at(value, 4),
-        data: data.n_children() > 0 ? data.get_data_as_bytes() : null,
-    };
-}
-
-function unpackItem(value) {
-    return {
-        key: at(value, 0),
-        appId: at(value, 1),
-        title: at(value, 2),
-        tooltip: at(value, 3),
-        status: at(value, 4),
-        accessibleName: at(value, 5),
-        hasMenu: at(value, 6),
-        itemIsMenu: at(value, 7),
-        icon: unpackIcon(child(value, 8)),
-    };
-}
-
-function unpackNode([id, parent, kind, label, enabled, visible,
-    toggleState, toggleType, iconName, shortcut, hasChildren]) {
-    return {
-        id,
-        parent,
-        kind,
-        label,
-        enabled,
-        visible,
-        toggleState,
-        toggleType,
-        iconName,
-        shortcut,
-        hasChildren,
-    };
-}
-
-function unpackMenu([key, revision, nodes]) {
-    return {key, revision: Number(revision), nodes: nodes.map(unpackNode)};
-}
-
-function unpackConfig([iconSize, sort, order, hidden, showWhenEmpty, panelBox, panelPosition]) {
-    return {
-        iconSize,
-        sort,
-        order,
-        hidden,
-        showWhenEmpty,
-        panelBox,
-        panelPosition,
-    };
-}
-
-function unpackStatus([version, watcherName, watcherOwned, watcherOwner,
-    hostRegistered, itemCount, revision, configPath, lastError]) {
-    return {
-        version,
-        watcherName,
-        watcherOwned,
-        watcherOwner,
-        hostRegistered,
-        itemCount,
-        revision: Number(revision),
-        configPath,
-        lastError,
-    };
 }

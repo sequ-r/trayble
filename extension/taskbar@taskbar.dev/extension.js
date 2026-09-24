@@ -80,19 +80,33 @@ export default class TaskbarExtension extends Extension {
         }
         this._busy = true;
         try {
-            const config = this._config ?? await this._client.getConfig();
+            // Each step is attributed separately: the log then names the
+            // exact stage that failed instead of "something in the refresh".
+            const config = await this._stage('reading the configuration',
+                async () => this._config ?? await this._client.getConfig());
             this._config = config;
+
             const scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
-            const items = await this._client.listItems(config.iconSize * scaleFactor);
-            this._applyItems(items, config);
-        } catch (error) {
-            console.error(`taskbar: cannot list tray items: ${error.message}`);
+            const items = await this._stage('listing the tray items',
+                () => this._client.listItems(config.iconSize * scaleFactor));
+
+            await this._stage('painting the tray items',
+                async () => this._applyItems(items, config));
         } finally {
             this._busy = false;
             if (this._queued) {
                 this._queued = false;
                 this._refreshItems().catch(logError);
             }
+        }
+    }
+
+    async _stage(what, run) {
+        try {
+            return await run();
+        } catch (error) {
+            console.error(`taskbar: error while ${what}: ${error.message}`);
+            throw error;
         }
     }
 

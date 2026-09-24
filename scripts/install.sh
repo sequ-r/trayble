@@ -59,7 +59,10 @@ for bin in "${bins[@]}"; do
     install -m 755 "$here/target/$profile/$bin" "$bindir/$bin"
 done
 
-install -m 644 "$here"/extension/taskbar@taskbar.dev/* "$extension_dir/"
+# Only the extension itself; the tests stay out of the install.
+install -m 644 "$here"/extension/taskbar@taskbar.dev/*.js \
+    "$here"/extension/taskbar@taskbar.dev/*.json \
+    "$here"/extension/taskbar@taskbar.dev/*.css "$extension_dir/"
 
 # `data/` mirrors the layout under share/, so nothing has to be computed.
 for unit in "$here"/data/dbus-1/services/* "$here"/data/systemd/user/*; do
