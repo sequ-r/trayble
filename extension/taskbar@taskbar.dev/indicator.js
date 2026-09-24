@@ -169,6 +169,10 @@ function resolveThemedIcon(name, themePath, size) {
         return new Gio.FileIcon({file: Gio.File.new_for_path(name)});
 
     if (themePath) {
+        // Note: this is St's IconTheme, not GTK's. Its lookup_icon() takes
+        // (name, size, flags) — verified against gnome-shell's
+        // src/st/st-icon-theme.h, since St now lives in gnome-shell rather
+        // than in mutter.
         const theme = new St.IconTheme();
         theme.set_search_path([themePath]);
         const info = theme.lookup_icon(name, size, 0);

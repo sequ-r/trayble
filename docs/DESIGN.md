@@ -24,6 +24,17 @@ The extension is a renderer: it paints icons the daemon already resolved and
 forwards input back. It has no knowledge of StatusNotifierItem, pixmaps or
 menu protocols.
 
+### Platform notes worth remembering
+
+- **St lives in gnome-shell, not in mutter.** Its sources are `src/st/*.h` in
+  the *gnome-shell* tree (mutter 51 has no `src/st` at all), and its APIs
+  differ from the GTK functions of the same name: `St.IconTheme.lookup_icon()`
+  takes `(name, size, flags)` where GTK's takes
+  `(name, fallbacks, size, scale, direction, flags)`. Verify St calls against
+  gnome-shell's headers — getting this wrong throws at best and aborts the
+  compositor at worst, since a wrong argument into St is a wrong argument
+  into C.
+
 ## Functional core, imperative shell
 
 `taskbar-core` is pure: no I/O, no D-Bus, no GUI types, no interior
