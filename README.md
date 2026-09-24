@@ -2,7 +2,7 @@
 
 A system tray for the GNOME panel. It shows the tray icons (StatusNotifierItem)
 of running applications and services next to the clock, with their menus, in
-GNOME Shell 48–50.
+GNOME Shell 48–51.
 
 ```
  GNOME Shell panel ──► taskbar@taskbar.dev (GJS, thin renderer)
